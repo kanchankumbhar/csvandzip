@@ -1,0 +1,270 @@
+<html>
+<div>
+<table>
+<tr>
+<td>Upload Retention Report File </td>
+<td>
+ <input type="file" id="csvToUpload" />
+</td>
+</tr>
+<tr>
+<td>Upload Object Folder </td>
+<td>
+ <input type="file" id="objectFolder" webkitdirectory directory  />
+</td>
+</tr>
+<tr>
+<td colspan="2" style="text-align: center;height:50px">
+<input type="button" text="Process" Value="Process Batch" onclick="ImportCSVFile();" /> 
+</td>
+</tr>
+</table>
+</div>
+<script type="text/javascript" src="https://api.filepicker.io/v1/filepicker.js"></script>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script> 
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.4/jszip.min.js"></script>
+<script type="text/javascript" src="FileSaver.js"></script> 
+ <script src="Global.js" language="javascript"></script>
+    <script src="XMLWriter.js" language="javascript"></script>
+<script type="text/javascript">
+var fileCounter=0;
+function parseCSVLine(line) {
+    line = line.split(',');
+    // check for splits performed inside quoted strings and correct if needed
+    for (var i = 0; i < line.length; i++) {
+        var chunk = line[i].replace(/^[\s]*|[\s]*$/g, "");
+        var quote = "";
+        if (chunk.charAt(0) == '"' || chunk.charAt(0) == "'") quote = chunk.charAt(0);
+        if (quote != "" && chunk.charAt(chunk.length - 1) == quote) quote = "";
+
+        if (quote != "") {
+            var j = i + 1;
+
+            if (j < line.length) chunk = line[j].replace(/^[\s]*|[\s]*$/g, "");
+
+            while (j < line.length && chunk.charAt(chunk.length - 1) != quote) {
+                line[i] += ',' + line[j];
+                line.splice(j, 1);
+                // line.splice(j, 3);
+                chunk = line[j].replace(/[\s]*$/g, "");
+            }
+
+            if (j < line.length) {
+                line[i] += ',' + line[j];
+                line.splice(j, 1);
+                //line.splice(j, 3);
+            }
+        }
+    }
+
+    for (var i = 0; i < line.length; i++) {
+        // remove leading/trailing whitespace
+        line[i] = line[i].replace(/^[\s]*|[\s]*$/g, "");
+
+        // remove leading/trailing quotes
+        if (line[i].charAt(0) == '"') line[i] = line[i].replace(/^"|"$/g, "");
+        else if (line[i].charAt(0) == "'") line[i] = line[i].replace(/^'|'$/g, "");
+    }
+    return line;
+}
+
+function ImportCSVFile() {
+   
+     if ($("#csvToUpload").val() == "")
+        alert("Please select CSV file");
+
+    else {
+       
+                var f = document.getElementById('csvToUpload');
+                filepicker.setKey("ATdRwXUQuRsKC_8WxUc21z");
+                filepicker.read(f, { asText: true }, function (data) {
+                    // var jsonResult = csvToJson(data);
+                    var error = false;
+                    var csvText = data;
+                    var jsonText = "";
+                    if (csvText == "") { error = true; message = "Enter CSV text below."; }
+
+                    if (!error) {
+                        csvRows = csvText.split(/[\r\n]/g); // split into rows
+
+                        // get rid of empty rows
+                        for (var i = 0; i < csvRows.length; i++) {
+                            if (csvRows[i].replace(/^[\s]*|[\s]*$/g, '') == "") {
+                                csvRows.splice(i, 1);
+                                //csvRows.splice(i, 3);
+                                i--;
+                            }
+                        }
+
+                        var headerRow = csvRows[0];
+                      
+                      
+                        for (var i = 0; i < csvRows.length; i++) {
+                            csvRows[i] = parseCSVLine(csvRows[i]);
+                        }
+                        objArr = [];
+                       // GLOBAL_FINISH_COUNTER = csvRows.length - 1;
+                        for (var i = 1; i < csvRows.length; i++) {
+                            if (csvRows[i].length > 0) objArr.push({});
+                            for (var j = 0; j < csvRows[i].length; j++) {
+                                {                                    
+                                        objArr[i - 1][csvRows[0][j]] = csvRows[i][j];
+                                }
+                            }
+                        }
+                      var objectFolder = document.getElementById('objectFolder');
+					  objFinal=[];
+					   for(var i=0;i<objArr.length;i++)
+					   {
+							var objectFound=$.grep(objectFolder.files,function(ele){
+								return ele.name== objArr[i].FilePath;
+							});
+							
+							if(objectFound.length>0)
+							{
+							fileCounter++;
+							jsonText = JSON.stringify(objArr[i], null, "\t");
+							var jsonResult = JSON.parse(jsonText);
+							objFinal.push(jsonResult);
+							//console.log(json2xml(jsonResult));
+							}							
+					   }
+					   WriteTest(objFinal);
+                    }
+                });
+         
+
+    }
+}
+function WriteTest(objFinal)
+        {
+            try
+            {
+			var XML=new XMLWriter();
+                XML.BeginNode("batch");
+                XML.Attrib("server", "CMSCBP");
+			for(var i=0;i<objFinal.length;i++){
+                
+               
+                XML.BeginNode("uow", "");
+                XML.BeginNode("item");
+				XML.Attrib("type", "document");
+				XML.Attrib("itemtype", "TmSte"); 
+		
+				XML.BeginNode("attribute");
+				XML.Attrib("type", "string");
+				XML.Attrib("name", "RM_DOC_TYP_TXT"); 
+				XML.WriteString(objFinal[i].RetentionCode);
+				XML.EndNode();
+				
+				XML.BeginNode("attribute");
+				XML.Attrib("type", "string");
+				XML.Attrib("name", "TmSte_PthWNm"); 
+				XML.WriteString(objFinal[i].FilePath);
+				XML.EndNode();
+				
+				XML.BeginNode("attribute");
+				XML.Attrib("type", "string");
+				XML.Attrib("name", "TmSte_CtntAuth"); 
+				XML.WriteString(objFinal[i].ContentAuthor);
+				XML.EndNode();
+				
+				XML.BeginNode("attribute");
+				XML.Attrib("type", "string");
+				XML.Attrib("name", "TmSte_CtntOwnr"); 
+				XML.WriteString(objFinal[i].ContentOwner);
+				XML.EndNode();
+				
+				XML.BeginNode("attribute");
+				XML.Attrib("type", "string");
+				XML.Attrib("name", "TmSte_MetaKywrd"); 
+				XML.WriteString(objFinal[i].MetaKeywords);
+				XML.EndNode();
+				
+				XML.BeginNode("attribute");
+				XML.Attrib("type", "string");
+				XML.Attrib("name", "TmSte_LstModBy"); 
+				XML.WriteString(objFinal[i].LastModified);
+				XML.EndNode();
+				
+				XML.BeginNode("attribute");
+				XML.Attrib("type", "string");
+				XML.Attrib("name", "TmSte_LstMod"); 
+				XML.WriteString(objFinal[i].LastModifieddate);
+				XML.EndNode();
+				
+				XML.BeginNode("attribute");
+				XML.Attrib("type", "string");
+				XML.Attrib("name", "TmSte_BrnchNm"); 
+				XML.WriteString(objFinal[i].Branch);
+				XML.EndNode();
+				
+				XML.BeginNode("attribute");
+				XML.Attrib("type", "date");
+				XML.Attrib("name", "RM_EVNT_DT"); 
+				XML.WriteString(objFinal[i].ExpirationDate);
+				XML.EndNode();
+				
+				XML.BeginNode("attribute");
+				XML.Attrib("type", "timestamp");
+				XML.Attrib("name", "TmSte_LdTs"); 
+				XML.WriteString(new Date().toString());
+				XML.EndNode();
+		
+				
+                XML.EndNode();
+                XML.EndNode();
+                
+               // Takes care of unended tags.
+				}
+				XML.EndNode();
+				 XML.Close(); 
+                // The replace in the following line are only for making the XML look prettier in the textarea.
+              
+				
+				DocsToUpload = [];
+				DocToUploadGlobalCOunter=0;
+				var zip = new JSZip();
+				zip.file("batch.xml", XML.ToString().replace(/</g,"\n<"));				
+				 var objectFolder1 = document.getElementById('objectFolder');			
+				for(var i=0;i<objectFolder1.files.length;i++){
+				 //reader= new FileReader();
+				 var reader=new FileReader();
+				DocsToUpload.push({
+                                    FileName: objectFolder1.files[i].webkitRelativePath
+                                });
+				reader.readAsArrayBuffer(objectFolder1.files[i])
+				
+				reader.onload = function (e) {
+				DocToUploadGlobalCOunter++;
+				zip.file(DocsToUpload[DocToUploadGlobalCOunter-1].FileName,e.target.result);
+				if(DocToUploadGlobalCOunter==fileCounter){
+				zip.generateAsync({type:"blob"})
+				.then(function(content) {
+					// see FileSaver.js
+					var today = new Date();
+					var date = today.getFullYear()+""+(today.getMonth()+1)+""+today.getDate();
+					var time = today.getHours()+"" + today.getMinutes() ;
+					var dateTime = date+'-'+time;
+					saveAs(content, dateTime+".zip");
+				});
+				}
+				};
+				 reader.onerror = function (e) {
+                        alert(e.target.error);
+                    }
+				
+					}
+				
+				
+            }
+            catch(Err)
+            {
+                alert("Error: " + Err.description);
+            }
+            return false;
+        }
+</script>
+
+</html>

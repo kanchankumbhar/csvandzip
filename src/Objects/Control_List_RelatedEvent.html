@@ -1,0 +1,152 @@
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
+<head>
+    <title>Related Event Control</title>
+
+    <!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:TemplateHidden msdt:dt="string">0</mso:TemplateHidden>
+<mso:MasterPageDescription msdt:dt="string">This is a grid.</mso:MasterPageDescription>
+<mso:ContentTypeId msdt:dt="string">0x0101002039C03B61C64EC4A04F5361F385106601</mso:ContentTypeId>
+<mso:TargetControlType msdt:dt="string">;#Content Web Parts;#</mso:TargetControlType>
+<mso:HtmlDesignAssociated msdt:dt="string">1</mso:HtmlDesignAssociated>
+<mso:HtmlDesignConversionSucceeded msdt:dt="string">True</mso:HtmlDesignConversionSucceeded>
+<mso:HtmlDesignStatusAndPreview msdt:dt="string">https://lenzeweb.lenze.com/_catalogs/masterpage/Display%20Templates/Content%20Web%20Parts/Control_List_RelatedEvent.html, Konvertierung erfolgreich.</mso:HtmlDesignStatusAndPreview>
+<mso:_dlc_DocId msdt:dt="string">W37KCR4P7WFA-1-702</mso:_dlc_DocId>
+<mso:_dlc_DocIdItemGuid msdt:dt="string">5e63f296-66b3-4b2f-a08d-5c682736fff0</mso:_dlc_DocIdItemGuid>
+<mso:_dlc_DocIdUrl msdt:dt="string">http://lenzeweb.lenze.com/_layouts/15/DocIdRedir.aspx?ID=W37KCR4P7WFA-1-702, W37KCR4P7WFA-1-702</mso:_dlc_DocIdUrl>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+</head>
+
+<body>
+
+    <!--
+            Warning: Do not try to add HTML to this section. Only the contents of the first <div>
+            inside the <body> tag will be used while executing Display Template code. Any HTML that
+            you add to this section will NOT become part of your Display Template.
+    -->
+    <script>
+        $includeLanguageScript(this.url, "~sitecollection/_catalogs/masterpage/Display Templates/Language Files/{Locale}/CustomStrings.js");
+        $includeScript(this.url, "~sitecollection/style library/js/jquery-1.11.3.min.js");
+        $includeScript(this.url, "~sitecollection/style library/js/jquery.dataTables.min.js");
+        $includeCSS(this.url, "~sitecollection/style library/css/jquery.dataTables.css");
+        //this is custom CSS, using to change search text box style and other things....
+        $includeCSS(this.url, "~sitecollection/style library/css/Style-JQuery-table.css");
+    </script>
+
+    <!--
+        Use the div below to author your Display Template. Here are some things to keep in mind:
+        * Surround any JavaScript logic as shown below using a "pound underscore" (#_ ... _#) token
+        inside a comment.
+
+        * Use the values assigned to your variables using an "underscore pound equals"
+        (_#= ... =#_) token.
+    -->
+
+    <div id="Control_Grid_Event">
+
+        <!--#_ 
+if (!$isNull(ctx.ClientControl) &&
+    !$isNull(ctx.ClientControl.shouldRenderControl) &&
+    !ctx.ClientControl.shouldRenderControl())
+{
+    return "";
+}
+ctx.ListDataJSONGroupsKey = "ResultTables";
+var $noResults = Srch.ContentBySearch.getControlTemplateEncodedNoResultsMessage(ctx.ClientControl);
+
+var encodedId = $htmlEncode(ctx.ClientControl.get_nextUniqueId() + "_Table_");
+var headerRowId = $htmlEncode(encodedId + "_HeaderRow_");
+
+ctx.ManagedPropertyNames = [];
+ctx.OnPostRender = [];
+ctx.OnPostRender.push(function () {
+	
+	
+	$("#" + encodedId).dataTable({ 
+            initComplete: function () {
+            this.api().columns().every( function () {
+            if(this[0][0] == 1)
+				{
+                var column = this;
+                var select = $('<select><option value=""> Category</option></select>')
+                    .appendTo( $('#leftRelatedEvent') )
+                    .on( 'change', function () {
+                        var val = $.fn.dataTable.util.escapeRegex(
+                            $(this).val()
+                        );
+                        column
+                            .search( val ? '^'+val+'$' : '', true, false )
+                            .draw();
+                    } );
+                select.before('<label>Select : </label> ');
+                column.data().unique().sort().each( function ( d, j ) {
+                    select.append( '<option value="'+d+'">'+d+'</option>' )
+                } );
+              }
+             if(this[0][0] == 2)
+				{
+                var column = this;
+                var select = $('<select><option value="">Location</option></select>')
+                    .appendTo( $('#leftRelatedEvent') )
+                    .on( 'change', function () {
+                        var val = $.fn.dataTable.util.escapeRegex(
+                            $(this).val()
+                        );
+                        column
+                            .search( val ? '^'+val+'$' : '', true, false )
+                            .draw();
+                    } );
+                
+             select.before('<label>  </label> ');
+                column.data().unique().sort().each( function ( d, j ) { 
+                    select.append( '<option value="'+d+'">'+d+'</option>' )
+                } );
+            select.after('<label>  </label> ');
+              }
+            } );
+          
+        },
+            "bPaginate": false, "bSort": false,"bInfo":false,"bFilter":true,"oLanguage": { "sSearch": "Filter: "},"sDom": '<l<"#leftRelatedEvent"f>>' });
+    EnsureScriptFunc("sp.ui.dialog.js", "SP.UI.ModalDialog.showModalDialog", null);
+});
+
+var noResultsClassName = "ms-srch-result-noResults";
+
+var ListRenderRenderWrapper = function(itemRenderResult, inCtx, tpl)
+{
+    var iStr = [];
+    iStr.push(itemRenderResult);
+    return iStr.join('');
+}
+ctx['ItemRenderWrapper'] = ListRenderRenderWrapper;
+
+_#-->
+
+        <table id="_#= encodedId =#_" class="resultsTable cell-border">
+            <thead>
+                <tr id="_#= headerRowId =#_" class="resultsTableHeader">
+                    <th align="left" style="width: 20%;">Title</th>
+                    <th align="left" style="width: 20%">Category</th>
+                    <th align="left" style="width: 20%">Location</th>
+                    <th align="left" style="width: 20%">Start Time</th>
+                    <th align="left" style="width: 20%">End Time</th>
+                </tr>
+            </thead>
+            _#= ctx.RenderGroups(ctx) =#_
+        </table>
+
+        <!--#_
+if (ctx.ClientControl.get_shouldShowNoResultMessage())
+{
+_#-->
+        <!--
+        <div class="_#= noResultsClassName =#_">_#= $noResults =#_</div>
+        -->
+        <!--#_
+}
+_#-->
+
+    </div>
+</body>
+</html>
