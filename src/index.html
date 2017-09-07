@@ -2,6 +2,16 @@
 <div>
 <table>
 <tr>
+<td>Select Environment</td>
+<td>
+<select name="environment" id="ddlEnvironment" >
+  <option value="Test">Test</option>
+  <option value="Production">Production</option>
+  <option value="opel">Opel</option>  
+</select>
+</td>
+</tr>
+<tr>
 <td>Upload Retention Report File </td>
 <td>
  <input type="file" id="csvToUpload" />
@@ -20,15 +30,18 @@
 </tr>
 </table>
 </div>
-<script type="text/javascript" src="https://api.filepicker.io/v1/filepicker.js"></script>
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script> 
-
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.4/jszip.min.js"></script>
+<script type="text/javascript" src="filepicker.js"></script>
+<script type="text/javascript" src="jquery-2.1.1.js"></script> 
+<script type="text/javascript" src="json2xml.js"></script>  
+<script type="text/javascript" src="jszip.js"></script>
 <script type="text/javascript" src="FileSaver.js"></script> 
  <script src="Global.js" language="javascript"></script>
-    <script src="XMLWriter.js" language="javascript"></script>
+    <script src="XMLWriter-min.js" language="javascript"></script>
 <script type="text/javascript">
 var fileCounter=0;
+var extentionArray=["css","js"];
+var logs=[];
+var logs1=[];
 function parseCSVLine(line) {
     line = line.split(',');
     // check for splits performed inside quoted strings and correct if needed
@@ -95,16 +108,11 @@ function ImportCSVFile() {
                                 //csvRows.splice(i, 3);
                                 i--;
                             }
-                        }
-
-                        var headerRow = csvRows[0];
-                      
-                      
+                        }                       
                         for (var i = 0; i < csvRows.length; i++) {
                             csvRows[i] = parseCSVLine(csvRows[i]);
                         }
-                        objArr = [];
-                       // GLOBAL_FINISH_COUNTER = csvRows.length - 1;
+                        objArr = [];                       
                         for (var i = 1; i < csvRows.length; i++) {
                             if (csvRows[i].length > 0) objArr.push({});
                             for (var j = 0; j < csvRows[i].length; j++) {
@@ -117,6 +125,18 @@ function ImportCSVFile() {
 					  objFinal=[];
 					   for(var i=0;i<objArr.length;i++)
 					   {
+					   var isExcluded=false;
+					   var splitArray=objArr[i].FilePath.split(".");
+					   if(splitArray.length>1){
+						var fileExtenstion=splitArray[splitArray.length-1];
+						if(extentionArray.indexOf(fileExtenstion)>-1)
+						{
+							logs.push(objArr[i].FilePath+ " excluded from process \r\n");
+							isExcluded=true;
+							//break;
+						}
+					   }
+					   if(isExcluded == false){
 							var objectFound=$.grep(objectFolder.files,function(ele){
 								return ele.name== objArr[i].FilePath;
 							});
@@ -128,105 +148,28 @@ function ImportCSVFile() {
 							var jsonResult = JSON.parse(jsonText);
 							objFinal.push(jsonResult);
 							//console.log(json2xml(jsonResult));
+							}
+							else{
+									logs1.push(objArr[i].FilePath+ " not found in Object Folder \r\n");
 							}							
 					   }
-					   WriteTest(objFinal);
+					   }
+					   CompressPackage(objFinal);
+					   SaveLogFile();
                     }
                 });
-         
-
     }
 }
-function WriteTest(objFinal)
+function CompressPackage(objFinal)
         {
             try
             {
-			var XML=new XMLWriter();
-                XML.BeginNode("batch");
-                XML.Attrib("server", "CMSCBP");
-			for(var i=0;i<objFinal.length;i++){
-                
-               
-                XML.BeginNode("uow", "");
-                XML.BeginNode("item");
-				XML.Attrib("type", "document");
-				XML.Attrib("itemtype", "TmSte"); 
-		
-				XML.BeginNode("attribute");
-				XML.Attrib("type", "string");
-				XML.Attrib("name", "RM_DOC_TYP_TXT"); 
-				XML.WriteString(objFinal[i].RetentionCode);
-				XML.EndNode();
-				
-				XML.BeginNode("attribute");
-				XML.Attrib("type", "string");
-				XML.Attrib("name", "TmSte_PthWNm"); 
-				XML.WriteString(objFinal[i].FilePath);
-				XML.EndNode();
-				
-				XML.BeginNode("attribute");
-				XML.Attrib("type", "string");
-				XML.Attrib("name", "TmSte_CtntAuth"); 
-				XML.WriteString(objFinal[i].ContentAuthor);
-				XML.EndNode();
-				
-				XML.BeginNode("attribute");
-				XML.Attrib("type", "string");
-				XML.Attrib("name", "TmSte_CtntOwnr"); 
-				XML.WriteString(objFinal[i].ContentOwner);
-				XML.EndNode();
-				
-				XML.BeginNode("attribute");
-				XML.Attrib("type", "string");
-				XML.Attrib("name", "TmSte_MetaKywrd"); 
-				XML.WriteString(objFinal[i].MetaKeywords);
-				XML.EndNode();
-				
-				XML.BeginNode("attribute");
-				XML.Attrib("type", "string");
-				XML.Attrib("name", "TmSte_LstModBy"); 
-				XML.WriteString(objFinal[i].LastModified);
-				XML.EndNode();
-				
-				XML.BeginNode("attribute");
-				XML.Attrib("type", "string");
-				XML.Attrib("name", "TmSte_LstMod"); 
-				XML.WriteString(objFinal[i].LastModifieddate);
-				XML.EndNode();
-				
-				XML.BeginNode("attribute");
-				XML.Attrib("type", "string");
-				XML.Attrib("name", "TmSte_BrnchNm"); 
-				XML.WriteString(objFinal[i].Branch);
-				XML.EndNode();
-				
-				XML.BeginNode("attribute");
-				XML.Attrib("type", "date");
-				XML.Attrib("name", "RM_EVNT_DT"); 
-				XML.WriteString(objFinal[i].ExpirationDate);
-				XML.EndNode();
-				
-				XML.BeginNode("attribute");
-				XML.Attrib("type", "timestamp");
-				XML.Attrib("name", "TmSte_LdTs"); 
-				XML.WriteString(new Date().toString());
-				XML.EndNode();
-		
-				
-                XML.EndNode();
-                XML.EndNode();
-                
-               // Takes care of unended tags.
-				}
-				XML.EndNode();
-				 XML.Close(); 
-                // The replace in the following line are only for making the XML look prettier in the textarea.
-              
-				
+			var batchFileContent= CreateBatchFile(objFinal);
+			
 				DocsToUpload = [];
 				DocToUploadGlobalCOunter=0;
 				var zip = new JSZip();
-				zip.file("batch.xml", XML.ToString().replace(/</g,"\n<"));				
+				zip.file("batch.xml", batchFileContent);				
 				 var objectFolder1 = document.getElementById('objectFolder');			
 				for(var i=0;i<objectFolder1.files.length;i++){
 				 //reader= new FileReader();
@@ -248,6 +191,8 @@ function WriteTest(objFinal)
 					var time = today.getHours()+"" + today.getMinutes() ;
 					var dateTime = date+'-'+time;
 					saveAs(content, dateTime+".zip");
+					
+					CreateRequestFile(dateTime+".zip");
 				});
 				}
 				};
@@ -265,6 +210,142 @@ function WriteTest(objFinal)
             }
             return false;
         }
-</script>
+		function CreateBatchFile(objFinal){
+					 
+				 var xw = new XMLWriter('UTF-8');
+				xw.formatting = 'indented';//add indentation and newlines
+				xw.indentChar = ' ';//indent with spaces
+				xw.indentation = 2;//add 2 spaces per level
+
+				xw.writeStartDocument( );
+				//xw.writeDocType('SYSTEM "request.dtd"');
+				//xw.writeStartElement( 'request' );
+				  
+				  xw.writeStartElement('batch');
+				  xw.writeAttributeString( 'server', 'CMSCBP'); 
+				for(var i=0;i<objFinal.length;i++){    				  
+					  xw.writeStartElement('uow');
+					  xw.writeStartElement('item');
+					  xw.writeAttributeString( 'itemtype', 'TmSte');  
+					  xw.writeAttributeString( 'type', 'document');  
+					   
+					  xw.writeStartElement('attribute');
+					  xw.writeAttributeString( 'type', 'string');  
+					  xw.writeAttributeString( 'name', 'RM_DOC_TYP_TXT');  
+					  xw.writeData(objFinal[i].RetentionCode);					   
+					  xw.writeEndElement();
+					  
+					  xw.writeStartElement('attribute');
+					  xw.writeAttributeString( 'type', 'string');  
+					  xw.writeAttributeString( 'name', 'TmSte_PthWNm');  
+					  xw.writeData(objFinal[i].FilePath);	
+						xw.writeEndElement();
+
+						 xw.writeStartElement('attribute');
+					  xw.writeAttributeString( 'type', 'string');  
+					  xw.writeAttributeString( 'name', 'TmSte_CtntAuth');  
+					  xw.writeData(objFinal[i].ContentAuthor);	
+					  xw.writeEndElement();
+					  
+					  xw.writeStartElement('attribute');
+					  xw.writeAttributeString( 'type', 'string');  
+					  xw.writeAttributeString( 'name', 'TmSte_CtntOwnr');  
+					  xw.writeData(objFinal[i].ContentOwner);	
+					  xw.writeEndElement();
+					  
+					  xw.writeStartElement('attribute');
+					  xw.writeAttributeString( 'type', 'string');  
+					  xw.writeAttributeString( 'name', 'TmSte_MetaKywrd');  
+					  xw.writeData(objFinal[i].MetaKeywords);	
+					  xw.writeEndElement();
+					  
+					  xw.writeStartElement('attribute');
+					  xw.writeAttributeString( 'type', 'string');  
+					  xw.writeAttributeString( 'name', 'TmSte_LstModBy');  
+					  xw.writeData(objFinal[i].LastModified);	
+					  xw.writeEndElement();
+					  
+					   xw.writeStartElement('attribute');
+					  xw.writeAttributeString( 'type', 'string');  
+					  xw.writeAttributeString( 'name', 'TmSte_LstMod');  
+					  xw.writeData(objFinal[i].LastModifieddate);	
+					  xw.writeEndElement();
+					  
+					  xw.writeStartElement('attribute');
+					  xw.writeAttributeString( 'type', 'string');  
+					  xw.writeAttributeString( 'name', 'TmSte_BrnchNm');  
+					  xw.writeData(objFinal[i].Branch);	
+					  xw.writeEndElement();
+					  
+					  xw.writeStartElement('attribute');
+					  xw.writeAttributeString( 'type', 'date');  
+					  xw.writeAttributeString( 'name', 'RM_EVNT_DT');  
+					  xw.writeData(objFinal[i].ExpirationDate);	
+					  xw.writeEndElement();
+					  
+					   xw.writeStartElement('attribute');
+					  xw.writeAttributeString( 'type', 'timestamp');  
+					  xw.writeAttributeString( 'name', 'TmSte_LdTs');  
+					  xw.writeData(new Date().toString());	
+					  xw.writeEndElement();
+					 
+
+					  
+					 // xw.writeEndElement();
+					  
+					  xw.writeEndElement();
+					  xw.writeEndElement();
+				  }
+				  xw.writeEndElement();
+				  
+				//xw.writeEndElement();
+				xw.writeEndDocument();
+				 
+                // The replace in the following line are only for making the XML look prettier in the textarea.
+              return xw.flush();
+		
+		}
+		function CreateRequestFile(zipFileName)
+		{
+				var xw = new XMLWriter('UTF-8');
+				xw.formatting = 'indented';//add indentation and newlines
+				xw.indentChar = ' ';//indent with spaces
+				xw.indentation = 2;//add 2 spaces per level
+
+				xw.writeStartDocument( );
+				xw.writeDocType('SYSTEM "request.dtd"');
+				//xw.writeStartElement( 'request' );
+				  
+				  xw.writeStartElement('request');
+					xw.writeAttributeString( 'type', 'store');   
+					
+					xw.writeElementString('appid', 'TMSITESTORE');
+					xw.writeElementString('priority', '10');
+				  
+				    xw.writeStartElement('store');
+					xw.writeAttributeString( 'stageType', 'package');
+					xw.writeAttributeString( 'type', 'PFGXMLV1' );
+				    xw.writeElementString('stageName', '20130415_2012.zip');
+				   
+					xw.writeElementString('compression', 'ZIP');
+				    xw.writeEndElement();
+				    xw.writeEndElement();
+				  
+				//xw.writeEndElement();
+				xw.writeEndDocument();	
+				var blob = new Blob([xw.flush()], {type: "text/plain;charset=utf-8"});
+				saveAs(blob, "Request.xml");
+				
+		}
+
+		function SaveLogFile(){
+		var blob = new Blob([logs], {type: "text/plain;charset=utf-8"});
+				saveAs(blob, "LogFile.log");
+				
+				var blob = new Blob([logs1], {type: "text/plain;charset=utf-8"});
+				saveAs(blob, "LogFile1.log");
+				
+		}
+		</script>
 
 </html>
