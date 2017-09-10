@@ -18,6 +18,13 @@
 </td>
 </tr>
 <tr>
+<tr>
+<td>Upload Document Class File </td>
+<td>
+ <input type="file" id="docClassToUpload" />
+</td>
+</tr>
+<tr>
 <td>Upload Object Folder </td>
 <td>
  <input type="file" id="objectFolder" webkitdirectory directory  />
@@ -25,7 +32,7 @@
 </tr>
 <tr>
 <td colspan="2" style="text-align: center;height:50px">
-<input type="button" text="Process" Value="Process Batch" onclick="ImportCSVFile();" /> 
+<input type="button" text="Process" Value="Process Batch" onclick="ImportDocumentClass();" /> 
 </td>
 </tr>
 </table>
@@ -42,8 +49,11 @@
 <script type="text/javascript">
 var fileCounter=0;
 var extentionArray=["css","js"];
-var logs=[];
-var logs1=[];
+var logs="File Name,Reason \r\n";
+var logs1="File Name,Reason \r\n";
+var excludePath="/node_modules/";
+var excludeFile="readme.txt";
+var documentClass=[];
 function parseCSVLine(line) {
     line = line.split(',');
     // check for splits performed inside quoted strings and correct if needed
@@ -133,26 +143,56 @@ function ImportCSVFile() {
 						var fileExtenstion=splitArray[splitArray.length-1];
 						if(extentionArray.indexOf(fileExtenstion)>-1)
 						{
-							logs.push(objArr[i].FilePath+ " excluded from process \r\n");
+							logs= logs+objArr[i].FilePath+ ", Skiped file extenstion \r\n";
 							isExcluded=true;
 							//break;
 						}
 					   }
+					    if(isExcluded == false){
+							
+						}
+					   
 					   if(isExcluded == false){
+							
+							var documentClassDetails=$.grep(documentClass,function(ele){
+								return ele.Retention_Code== objArr[i].RetentionCode;
+							});
+							if(documentClassDetails.length>0){
+
+									objArr[i].RetentionCode=documentClassDetails[0].Document_Class;
+									var myDate = new Date(objArr[i].ExpirationDate);
+											
+									myDate.setFullYear(myDate.getFullYear() +parseInt(documentClassDetails[0].Duration));
+									
+									var valid=CheckExpirationDate(myDate);
+									if(valid == false)
+								{						
+									isExcluded=true;
+									logs= logs+objArr[i].FilePath+ ", Expiry Crossed \r\n";
+									
+							}							
+					   }
+					   }
+					   if(isExcluded == false){						
+					   
 							var objectFound=$.grep(objectFolder.files,function(ele){
-								return ele.name== objArr[i].FilePath;
+								return ele.name.toLowerCase()== objArr[i].FilePath.toLowerCase() || ele.webkitRelativePath.toLowerCase().indexOf(objArr[i].FilePath) >-1;
 							});
 							
 							if(objectFound.length>0)
 							{
+							if(objArr[i].FilePath.toLowerCase()!=excludeFile.toLowerCase() && objectFound[0].webkitRelativePath.toLowerCase().indexOf(excludePath.toLowerCase())==-1){
 							fileCounter++;
 							jsonText = JSON.stringify(objArr[i], null, "\t");
 							var jsonResult = JSON.parse(jsonText);
 							objFinal.push(jsonResult);
 							//console.log(json2xml(jsonResult));
 							}
+							else
+							logs = logs + objArr[i].FilePath+ ", Excluded as per rule \r\n";
+							}
 							else{
-									logs1.push(objArr[i].FilePath+ " not found in Object Folder \r\n");
+									logs1 = logs1 + objArr[i].FilePath+ ", Not found in Object Folder \r\n";
 							}							
 					   }
 					   }
@@ -162,6 +202,58 @@ function ImportCSVFile() {
                 });
     }
 }
+function CheckExpirationDate(expirationDate)
+{
+	var q = new Date();	
+	
+	if(q < expirationDate) return true;
+	return false;
+}
+function ImportDocumentClass() {
+ if ($("#docClassToUpload").val() == "")
+        alert("Please select Document class file");
+
+    else {
+       
+                var f = document.getElementById('docClassToUpload');
+                filepicker.setKey("ATdRwXUQuRsKC_8WxUc21z");
+                filepicker.read(f, { asText: true }, function (data) {
+                    // var jsonResult = csvToJson(data);
+                    var error = false;
+                    var csvText = data;
+                    var jsonText = "";
+                    if (csvText == "") { error = true; message = "Enter CSV text below."; }
+
+                    if (!error) {
+                        csvRows = csvText.split(/[\r\n]/g); // split into rows
+
+                        // get rid of empty rows
+                        for (var i = 0; i < csvRows.length; i++) {
+                            if (csvRows[i].replace(/^[\s]*|[\s]*$/g, '') == "") {
+                                csvRows.splice(i, 1);
+                                //csvRows.splice(i, 3);
+                                i--;
+                            }
+                        }                       
+                        for (var i = 0; i < csvRows.length; i++) {
+                            csvRows[i] = parseCSVLine(csvRows[i]);
+                        }
+                       // objArr = [];                       
+                        for (var i = 1; i < csvRows.length; i++) {
+                            if (csvRows[i].length > 0) documentClass.push({});
+                            for (var j = 0; j < csvRows[i].length; j++) {
+                                {                                    
+                                        documentClass[i - 1][csvRows[0][j]] = csvRows[i][j];
+                                }
+                            }
+                        }
+						ImportCSVFile();
+                    }
+                });
+    }
+}
+
+
 function CompressPackage(objFinal)
         {
             try
@@ -196,6 +288,7 @@ function CompressPackage(objFinal)
 					
 					CreateRequestFile(dateTime+".zip");
 				});
+				//break;
 				}
 				};
 				 reader.onerror = function (e) {
@@ -325,9 +418,10 @@ function CompressPackage(objFinal)
 					xw.writeElementString('priority', '10');
 				  
 				    xw.writeStartElement('store');
+					
 					xw.writeAttributeString( 'stageType', 'package');
 					xw.writeAttributeString( 'type', 'PFGXMLV1' );
-				    xw.writeElementString('stageName', '20130415_2012.zip');
+				    xw.writeElementString('stageName', zipFileName);
 				   
 					xw.writeElementString('compression', 'ZIP');
 				    xw.writeEndElement();
@@ -342,10 +436,10 @@ function CompressPackage(objFinal)
 
 		function SaveLogFile(){
 		var blob = new Blob([logs], {type: "text/plain;charset=utf-8"});
-				saveAs(blob, "LogFile.log");
+				saveAs(blob, "IgnoredFile.csv");
 				
 				var blob = new Blob([logs1], {type: "text/plain;charset=utf-8"});
-				saveAs(blob, "LogFile1.log");
+				saveAs(blob, "Missed_Object.csv");
 				
 		}
 		</script>
