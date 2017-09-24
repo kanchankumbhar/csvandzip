@@ -1,0 +1,38 @@
+#!C:\Strawberry\perl\bin\perl
+
+use strict;
+use warnings;
+use Time::Local;
+
+
+
+my $date  = "06/06/2009";
+
+my ($m,$d,$y) = $date =~ m|(\d+)/(\d+)/(\d+)|;
+my $timet = timelocal(0, 0, 0, $d, $m-1, $y);
+print "Date '$date' => $timet\n";
+
+# Updated -- check the reverse
+my $ltime = localtime($timet);
+print "$timet => $ltime\n";
+
+
+my $now = $timet;
+#my $now = time();
+print $now;
+
+print "human readable 1: ", scalar localtime($now), "\n";
+
+
+my $secs_in_day = (3600 * 24); # seconds in hour * 24
+my $no_of_days_hence = $now + (45 * $secs_in_day);
+print "epoch: $no_of_days_hence\n";
+print "human readable: ", scalar localtime($no_of_days_hence), "\n";
+
+my ($sec,$min,$hour,$mday,$mon, $year,$wday,$yday,$isdst) = localtime($no_of_days_hence);
+
+$mon++;
+$year += 1900;
+
+print "formatted: $mon/$mday/$year\n";
+
